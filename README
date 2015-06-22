@@ -1,0 +1,46 @@
+Raider v0.1 - Alpha
+
+This is designed to allow a user to browser to a website using burp suite and save response headers they wish to fuzz. 
+Markers are placed around each variable (^%) that fuzzing is requested on so a header with password=abc becomes password=^%abc^%
+An attack is then generated with a nominated wordlist replacing each marker and recieving a response. Success criteria can be specified such as avoiding / obtaining a response code, being over / under a particular size or having / excluding a nominated keyword. 
+
+Example
+
+We host our very simple example webpage found in misc/. This asks for a username and password. We enter two values, a known username 'admin' and 'passwordinput' into the fields and intercept the request with burp. This header is saved (select -> right click -> copy to file) as example.txt. 
+
+The header file looks as follows:
+POST /trylog.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 37
+
+username=admin&password=passwordinput
+
+Proceding with the request we find we get the message 'Error: Incorrect login or password', an unlikely thing to see on a successful request. We place markers surrounding our fuzzing inputs as we want to try username / password combinations. 
+
+POST /trylog.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 37
+
+username=admin&password=^%passwordinput^%
+
+We then save it as example_marked.txt
+
+Running the program on this would be the following syntax. 
+
+python raider --wordlist wordlist.txt --header example_marked.txt -s 2 --keyword Error --attack 1
+
+Breaking it down we're going to use each word in wordlist.txt (one word per line) to take the place of the marker (^%passwordinput^%) based off the request in example_marker.txt. If session ID's etc were in this marker they would be included in the request. It will examine the responses and if it does not contain the word "Error" it will print out success along with the value sent. 
